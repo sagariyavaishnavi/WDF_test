@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kanban Board</title>
+  <style>
+    /* General Styles */
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      margin: 0 auto;
+      max-width: 1200px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+      font-size: 36px;
+      margin-bottom: 40px;
+    }
+
+    /* Column Styles */
+    .column {
+      background: #fff;
+      width: 30%;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      min-height: 300px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .column h2 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 15px;
+      font-size: 24px;
+    }
+
+    /* Add Card Button */
+    .add-card {
+      padding: 12px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background-color: #e7e7e7;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .add-card:hover {
+      background-color: #ddd;
+    }
+
+    /* Card Styles */
+    .card {
+      background: #f9f9f9;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      transition: transform 0.2s ease-in-out;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+    }
+
+    .card .card-label {
+      padding: 4px 8px;
+      border-radius: 12px;
+      color: white;
+      font-size: 12px;
+      margin-right: 8px;
+      text-transform: capitalize;
+    }
+
+    .card .card-label.low {
+      background-color: #28a745;
+    }
+
+    .card .card-label.medium {
+      background-color: #ffc107;
+    }
+
+    .card .card-label.high {
+      background-color: #dc3545;
+    }
+
+    .card .card-actions button {
+      background: none;
+      border: none;
+      color: #007bff;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .card .card-actions button:hover {
+      text-decoration: underline;
+    }
+
+    /* Drag-and-Drop Styles */
+    .column[aria-grabbed="true"] {
+      background: #e9f7ff;
+    }
+
+    /* Card Edit Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.6);
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      width: 400px;
+      text-align: center;
+    }
+
+    .modal-content input,
+    .modal-content textarea,
+    .modal-content select {
+      padding: 10px;
+      width: 100%;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+
+    .modal-content button {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .modal-content button:hover {
+      background-color: #0056b3;
+    }
+
+    /* Card Form Styles */
+    .card-form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Kanban Board</h1>
+  
+  <div class="container">
+    <div class="column" id="todo" ondrop="drop(event)" ondragover="allowDrop(event)">
+      <h2>To Do</h2>
+      <div class="add-card" onclick="openCardForm('todo')">+ Add a card</div>
+      <div class="cards" id="todo-cards" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+    </div>
+    <div class="column" id="inProgress" ondrop="drop(event)" ondragover="allowDrop(event)">
+      <h2>In Progress</h2>
+      <div class="add-card" onclick="openCardForm('inProgress')">+ Add a card</div>
+      <div class="cards" id="inProgress-cards" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+    </div>
+    <div class="column" id="done" ondrop="drop(event)" ondragover="allowDrop(event)">
+      <h2>Done</h2>
+      <div class="add-card" onclick="openCardForm('done')">+ Add a card</div>
+      <div class="cards" id="done-cards" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+    </div>
+  </div>
+
+  <!-- Modal for Card Form -->
+  <div class="modal" id="cardModal">
+    <div class="modal-content">
+      <h3>Edit Card</h3>
+      <div class="card-form">
+        <input type="text" id="cardTitle" placeholder="Card Title" />
+        <textarea id="cardDescription" placeholder="Card Description"></textarea>
+        <label for="cardLabel">Priority</label>
+        <select id="cardLabel">
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
+        <button onclick="saveCard()">Save</button>
+        <button onclick="closeModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let cardFormColumn = null;
+    let currentCardIndex = null;
+    let boardData = JSON.parse(localStorage.getItem('kanbanBoard')) || { todo: [], inProgress: [], done: [] };
+
+    const renderBoard = () => {
+      ['todo', 'inProgress', 'done'].forEach(column => {
+        const columnCards = boardData[column];
+        const columnElement = document.getElementById(${column}-cards);
+        columnElement.innerHTML = columnCards.map((card, index) => `
+          <div class="card" id="card-${index}" draggable="true" ondragstart="drag(event)" onclick="openCard(${index}, '${column}')">
+            <div>${card.title}</div>
+            <div class="card-label ${card.label}">${card.label}</div>
+            <div class="card-actions">
+              <button onclick="editCard(${index}, '${column}')">Edit</button>
+              <button onclick="deleteCard(${index}, '${column}')">Delete</button>
+            </div>
+          </div>
+        `).join('');
+      });
+    };
+
+    const saveBoard = () => {
+      localStorage.setItem('kanbanBoard', JSON.stringify(boardData));
+    };
+
+    const openCardForm = (column) => {
+      cardFormColumn = column;
+      document.getElementById('cardTitle').value = '';
+      document.getElementById('cardDescription').value = '';
+      document.getElementById('cardLabel').value = 'low';
+      document.getElementById('cardModal').style.display = 'flex';
+    };
+
+    const closeModal = () => {
+      document.getElementById('cardModal').style.display = 'none';
+    };
+
+    const saveCard = () => {
+      const card = {
+        title: document.getElementById('cardTitle').value,
+        description: document.getElementById('cardDescription').value,
+        label: document.getElementById('cardLabel').value
+      };
+      if (currentCardIndex !== null) {
+        boardData[cardFormColumn][currentCardIndex] = card;
+      } else {
+        boardData[cardFormColumn].push(card);
+      }
+      saveBoard();
+      renderBoard();
+      closeModal();
+    };
+
+    const openCard = (index, column) => {
+      currentCardIndex = index;
+      cardFormColumn = column;
+      const card = boardData[column][index];
+      document.getElementById('cardTitle').value = card.title;
+      document.getElementById('cardDescription').value = card.description;
+      document.getElementById('cardLabel').value = card.label;
+      document.getElementById('cardModal').style.display = 'flex';
+    };
+
+    const editCard = (index, column) => {
+      openCard(index, column);
+    };
+
+    const deleteCard = (index, column) => {
+      boardData[column].splice(index, 1);
+      saveBoard();
+      renderBoard();
+    };
+
+    const drag = (event) => {
+      event.dataTransfer.setData('text', event.target.id);
+    };
+
+    const allowDrop = (event) => {
+      event.preventDefault();
+    };
+
+    const drop = (event) => {
+      event.preventDefault();
+      const data = event.dataTransfer.getData('text');
+      const draggedCardIndex = data.split('-')[1];
+      const draggedCard = boardData[cardFormColumn][draggedCardIndex];
+      boardData[cardFormColumn].splice(draggedCardIndex, 1);
+      const targetColumn = event.target.closest('.column').id.replace('-cards', '');
+      boardData[targetColumn].push(draggedCard);
+      saveBoard();
+      renderBoard();
+    };
+
+    renderBoard();
+  </script>
+</body>
+</html>
