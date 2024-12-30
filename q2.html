@@ -220,7 +220,7 @@
     const renderBoard = () => {
       ['todo', 'inProgress', 'done'].forEach(column => {
         const columnCards = boardData[column];
-        const columnElement = document.getElementById(${column}-cards);
+        const columnElement = document.getElementById(`${column}-cards`);
         columnElement.innerHTML = columnCards.map((card, index) => `
           <div class="card" id="card-${index}" draggable="true" ondragstart="drag(event)" onclick="openCard(${index}, '${column}')">
             <div>${card.title}</div>
